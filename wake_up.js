@@ -423,38 +423,33 @@ ${historyText}`
       let safeTitle = title || "来自伴侣";
       if (/^\d/.test(safeTitle)) safeTitle = "来自伴侣｜" + safeTitle;
 
-      if (!process.env.BARK_KEY) {
-        console.log("\n未配置 BARK_KEY，本次不发送 Bark\n");
-        eventContent = `（${getLocalTimeString()} 自动唤醒：本次未发送 Bark｜原因：Bark Key 未配置）`;
-      } else {
-        const barkPayload = {
-          title: safeTitle,
-          body: safeBody,
-          device_key: process.env.BARK_KEY,
-          icon: process.env.CUSTOM_ICON_URL
-        };
+                if (!process.env.NTFY_TOPIC) {
+            console.log("\n未配置 NTFY_TOPIC，本次不发送推送\n");
+            eventContent = `（${getLocalTimeString()} 自动唤醒：本次未发送推送｜原因：NTFY_TOPIC 未配置）`;
+          } else {
+            const ntfyUrl = `https://ntfy.sh/${process.env.NTFY_TOPIC}`;
 
-        // 发送 Bark 推送
-        const barkResponse = await fetch("https://api.day.app/push", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(barkPayload)
-        });
+            // 发送 ntfy 推送
+            const ntfyResponse = await fetch(ntfyUrl, {
+              method: "POST",
+              headers: {
+                "Title": safeTitle,
+                "Priority": "default"
+              },
+              body: safeBody
+            });
 
-        const barkTextResult = await barkResponse.text();
-        let barkResult = {};
-        try {
-          barkResult = JSON.parse(barkTextResult);
-        } catch {}
-        console.log("\nBark Result:\n", barkResult || barkTextResult);
+            const ntfyTextResult = await ntfyResponse.text();
+            console.log("\nntfy Result:\n", ntfyTextResult);
 
-        if (!barkResponse.ok || (barkResult.code && barkResult.code !== 200)) {
-          const reason = barkResult.message || `HTTP ${barkResponse.status}`;
-          eventContent = `（${getLocalTimeString()} 自动唤醒：本次未发送 Bark｜原因：Bark 推送失败：${reason}）`;
-        } else {
-          eventContent = `（${getLocalTimeString()} 刚刚给用户发了 Bark：${safeTitle}｜${safeBody}）`;
-        }
-      }
+            if (!ntfyResponse.ok) {
+              const reason = `HTTP ${ntfyResponse.status}`;
+              eventContent = `（${getLocalTimeString()} 自动唤醒：本次未发送推送｜原因：ntfy 推送失败：${reason}）`;
+            } else {
+              eventContent = `（${getLocalTimeString()} 刚刚给用户发了推送：${safeTitle}｜${safeBody}）`;
+            }
+          }
+
     }
   }
 
